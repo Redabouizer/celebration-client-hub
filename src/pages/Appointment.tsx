@@ -7,14 +7,19 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { useServices } from '@/hooks/useServices';
+import { useDoctors } from '@/hooks/useDoctors';
+import { useCreateAppointment } from '@/hooks/useCreateAppointment';
 
 const Appointment = () => {
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(false);
+  const { data: services, isLoading: servicesLoading } = useServices();
+  const { data: doctors, isLoading: doctorsLoading } = useDoctors();
+  const createAppointment = useCreateAppointment();
+
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -25,26 +30,6 @@ const Appointment = () => {
     time: '',
     message: ''
   });
-
-  const services = [
-    'General Medical Consultation',
-    'Cardiology',
-    'Neurology',
-    'Oncology',
-    'Laboratory Services',
-    'Ophthalmology',
-    'Pediatrics',
-    'Orthopedics'
-  ];
-
-  const doctors = [
-    'Dr. Ahmed Hassan - Cardiologist',
-    'Dr. Fatima El Mansouri - Neurologist',
-    'Dr. Mohammed Alami - General Practitioner',
-    'Dr. Aicha Benali - Pediatrician',
-    'Dr. Youssef Tazi - Orthopedic Surgeon',
-    'Dr. Laila Ouali - Ophthalmologist'
-  ];
 
   const timeSlots = [
     '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
@@ -59,17 +44,24 @@ const Appointment = () => {
     e.preventDefault();
     
     if (!isAuthenticated) {
-      toast.error('Please login to book an appointment');
       navigate('/login');
       return;
     }
 
-    setIsLoading(true);
+    if (!formData.service || !formData.doctor || !formData.date || !formData.time) {
+      return;
+    }
 
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      toast.success('Appointment booked successfully! We will contact you shortly.');
+    createAppointment.mutate({
+      doctor_id: formData.doctor,
+      service_id: formData.service,
+      appointment_date: formData.date,
+      appointment_time: formData.time,
+      notes: formData.message,
+      symptoms: formData.message
+    });
+
+    if (!createAppointment.isPending) {
       setFormData({
         name: '',
         email: '',
@@ -80,10 +72,6 @@ const Appointment = () => {
         time: '',
         message: ''
       });
-    } catch (error) {
-      toast.error('Failed to book appointment. Please try again.');
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -181,12 +169,12 @@ const Appointment = () => {
                   </Label>
                   <Select value={formData.service} onValueChange={(value) => handleInputChange('service', value)}>
                     <SelectTrigger className="mt-1 rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500">
-                      <SelectValue placeholder="Select a service" />
+                      <SelectValue placeholder={servicesLoading ? "Loading services..." : "Select a service"} />
                     </SelectTrigger>
                     <SelectContent>
-                      {services.map((service) => (
-                        <SelectItem key={service} value={service}>
-                          {service}
+                      {services?.map((service) => (
+                        <SelectItem key={service.id} value={service.id}>
+                          {service.name} - ${service.price}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -199,12 +187,12 @@ const Appointment = () => {
                   </Label>
                   <Select value={formData.doctor} onValueChange={(value) => handleInputChange('doctor', value)}>
                     <SelectTrigger className="mt-1 rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500">
-                      <SelectValue placeholder="Select a doctor" />
+                      <SelectValue placeholder={doctorsLoading ? "Loading doctors..." : "Select a doctor"} />
                     </SelectTrigger>
                     <SelectContent>
-                      {doctors.map((doctor) => (
-                        <SelectItem key={doctor} value={doctor}>
-                          {doctor}
+                      {doctors?.map((doctor) => (
+                        <SelectItem key={doctor.id} value={doctor.id}>
+                          Dr. {doctor.specialty} - {doctor.specialty}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -269,10 +257,10 @@ const Appointment = () => {
               <div className="text-center">
                 <Button
                   type="submit"
-                  disabled={isLoading}
+                  disabled={createAppointment.isPending}
                   className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-full text-lg font-medium"
                 >
-                  {isLoading ? 'Booking Appointment...' : 'Book Appointment'}
+                  {createAppointment.isPending ? 'Booking Appointment...' : 'Book Appointment'}
                 </Button>
               </div>
             </form>
