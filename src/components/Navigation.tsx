@@ -7,7 +7,7 @@ import { Menu, X } from 'lucide-react';
 
 const Navigation = () => {
   const location = useLocation();
-  const { isAuthenticated, user, logout } = useAuth();
+  const { isAuthenticated, profile, logout, loading } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const isActive = (path: string) => location.pathname === path;
@@ -19,6 +19,38 @@ const Navigation = () => {
     { path: '/doctors', label: 'Doctors' },
     { path: '/contact', label: 'Contact' }
   ];
+
+  if (loading) {
+    return (
+      <nav className="bg-white shadow-sm border-b sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <Link to="/" className="flex items-center">
+              <h1 className="text-2xl font-bold text-slate-700">MediCare</h1>
+            </Link>
+            <div className="hidden md:flex items-center space-x-8">
+              {navLinks.map((link) => (
+                <Link
+                  key={link.path}
+                  to={link.path}
+                  className={`text-sm font-medium transition-colors hover:text-blue-600 ${
+                    isActive(link.path)
+                      ? 'text-blue-600 border-b-2 border-blue-600 pb-1'
+                      : 'text-gray-600'
+                  }`}
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </div>
+            <div className="hidden md:flex items-center space-x-4">
+              <div className="w-20 h-10 bg-gray-200 animate-pulse rounded"></div>
+            </div>
+          </div>
+        </div>
+      </nav>
+    );
+  }
 
   return (
     <nav className="bg-white shadow-sm border-b sticky top-0 z-50">
@@ -55,7 +87,7 @@ const Navigation = () => {
                     Make Appointment
                   </Button>
                 </Link>
-                <span className="text-sm text-gray-600">Welcome, {user?.name}</span>
+                <span className="text-sm text-gray-600">Welcome, {profile?.full_name || 'User'}</span>
                 <Button
                   onClick={logout}
                   variant="outline"

@@ -1,6 +1,7 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 interface CreateAppointmentData {
   doctor_id: string;
@@ -16,17 +17,24 @@ export const useCreateAppointment = () => {
 
   return useMutation({
     mutationFn: async (data: CreateAppointmentData) => {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const { data: user } = await supabase.auth.getUser();
       
-      // Mock appointment creation
-      const appointment = {
-        id: Math.random().toString(36).substr(2, 9),
-        ...data,
-        patient_id: '1', // Mock patient ID
-        status: 'pending',
-        created_at: new Date().toISOString()
-      };
+      if (!user.user) {
+        throw new Error('User not authenticated');
+      }
+
+      const { data: appointment, error } = await supabase
+        .from('appointments')
+        .insert({
+          ...data,
+          patient_id: user.user.id,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        throw error;
+      }
 
       return appointment;
     },
